@@ -1,14 +1,16 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from DKEF import *
 from Utils import support_1d
 
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
 import warnings
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 from sklearn.cluster import KMeans
-from tensorflow.contrib.opt import ScipyOptimizerInterface
+# from tensorflow.contrib.opt import ScipyOptimizerInterface
+from ExternalOptimizerInterface import ExternalOptimizerInterface as ScipyOptimizerInterface
 
 from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
@@ -520,7 +522,7 @@ class DeepLite(object):
 
             self.sess.run(self.ops["accum_op"], feed_dict=feed)
 
-        res = self.sess.run([self.ops["train_step"],  self.states.values()[:-1]], feed_dict=feed)[1]
+        res = self.sess.run([self.ops["train_step"],  list(self.states.values())[:-1]], feed_dict=feed)[1]
         
         final_ntrain = self.train_params["final_ntrain"]
         final_nvalid  = self.train_params["final_nvalid"]
@@ -645,7 +647,7 @@ class DeepLite(object):
             self.load()
         else:
             self.save()
-        print "best score: %.5f" % best_score
+        print("best score: %.5f" % best_score)
         
         return self.state_hist
 
@@ -689,7 +691,7 @@ class DeepLite(object):
             
             data = self.target.valid_data[pointer:pointer+final_nvalid]
             feed[self.valid_data] = data
-            l = self.sess.run([self.ops["train_lambdas_B"], self.final_states.values()], feed_dict=feed)[1]
+            l = self.sess.run([self.ops["train_lambdas_B"], list(self.final_states.values())], feed_dict=feed)[1]
 
             for li, ln in enumerate(self.final_states.keys()):
                 self.final_state_hist[ln].append(l[li])
@@ -700,7 +702,7 @@ class DeepLite(object):
             d = self.target.valid_data[i*final_nvalid:(i+1)*final_nvalid]
             feed[self.valid_data] = d
             s += self.sess.run(self.final_states["score"], feed_dict=feed) * d.shape[0] / self.target.nvalid
-        print "final validation score: %.3f" % s
+        print("final validation score: %.3f" % s)
         self.sess.run(self.ops["assign_alpha"])
         self.save()
         return self.final_state_hist
@@ -725,7 +727,7 @@ class DeepLite(object):
         self.ops["train_lambdas_CG"].minimize(self.sess, feed_dict={self.valid_data : self.target.valid_data})
         self.sess.run(self.ops["assign_alpha"])
 
-        final_state_vals = self.sess.run(self.final_states.values()[2:])
+        final_state_vals = self.sess.run(list(self.final_states.values())[2:])
         nbatch = int(np.ceil(1.0*self.target.nvalid/final_nvalid))
         s = 0
         for i in range(nbatch):

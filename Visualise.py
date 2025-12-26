@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from LiteNet import FDTYPE
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 def plot_dataset(p, plot_size, ngrid, n=500, sample_params=dict(), dlogpdf_params = dict(), quiver_params=dict()):
 

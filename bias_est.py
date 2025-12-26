@@ -8,7 +8,8 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 import numpy as np
 from scipy.special import logsumexp
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from tqdm import tqdm
 
 from Datasets import load_data

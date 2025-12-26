@@ -6,7 +6,8 @@ import os
 from bias_est import est_mean, load_model
 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from tqdm import tqdm
 
 
