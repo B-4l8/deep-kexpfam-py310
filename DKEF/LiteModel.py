@@ -1,9 +1,10 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
-from Utils import *
-from BaseMeasure import *
-from Network import *
-from Kernel import *
+from .Utils import *
+from .BaseMeasure import *
+from .Network import *
+from .Kernel import *
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth=True

@@ -1,9 +1,10 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
 from collections import OrderedDict
 from time import time
-from settings import FDTYPE
-from Utils import construct_index
+from .settings import FDTYPE
+from .Utils import construct_index
 
 
 c = 30
@@ -45,7 +46,7 @@ class SumOutputNet:
                         zip( net.param.keys(), 
                              [tf.identity(v) for v in net.param.values()]
                            )
-                    ) for _ in xrange(net.batch_size)]
+                    ) for _ in range(net.batch_size)]
 
         # create input placeholder that has batch_size
         self.batch = tf.placeholder(FDTYPE, shape = (net.batch_size,) + net.ndim_in)
@@ -154,16 +155,16 @@ class Network(object):
         data, single   = self.reshape_data_array(data)
         ninput = data.shape[0]
         # number of batches
-        nbatch = ninput/self.batch_size
+        nbatch = ninput//self.batch_size
 
         son = SumOutputNet(self)
         
         # rearrange the parameter handles into a single array so tf.gradients can consume. It is arrange like:
         #         [ w_1_copy1, w_1_copy_2, w_1_copy_3, ..., w_nparam_copy_batch_size ]
-        batch_param = [ son.param_copy[i][k] for k in self.param.keys() for i in xrange(self.batch_size) ]
+        batch_param = [ son.param_copy[i][k] for k in self.param.keys() for i in range(self.batch_size) ]
 
         # grad will be arranged by [ ndim_out [len(batch_param)] ]
-        grad   = [ list(tf.gradients(son.sum_output[oi], batch_param)) for oi in xrange(self.ndim_out)]
+        grad   = [ list(tf.gradients(son.sum_output[oi], batch_param)) for oi in range(self.ndim_out)]
 
         # results stores grad over multiple batches
         results = []
@@ -171,7 +172,7 @@ class Network(object):
         init = tf.global_variables_initializer()
         sess.run(init)
 
-        for bi in xrange(nbatch):
+        for bi in range(nbatch):
             # get a batch
             batch_data = data[bi*self.batch_size:(bi+1)*self.batch_size]
             # run and append results, the first argument is [[w_1_copies], [w_2_copies], network output]
@@ -190,14 +191,14 @@ class Network(object):
         for ki, k in enumerate(self.param.keys()):
             grad_k = np.array([      
                         np.concatenate([
-                            results[bi][oi][ki*self.batch_size : (ki+1)*self.batch_size ] for bi in xrange(nbatch)
-                        ]) for oi in xrange(self.ndim_out)
+                            results[bi][oi][ki*self.batch_size : (ki+1)*self.batch_size ] for bi in range(nbatch)
+                        ]) for oi in range(self.ndim_out)
                      ])
             grad_value_dict[k] = grad_k
 
         
         # extract the output by using the last index of each batch
-        output_value = np.concatenate([results[bi][-1] for bi in xrange(nbatch)])
+        output_value = np.concatenate([results[bi][-1] for bi in range(nbatch)])
         return grad_value_dict, output_value
 
     def get_grad_data(self):
@@ -211,14 +212,14 @@ class Network(object):
         grad = []
         t0 = time()
         t1 = time()
-        print 'building grad output'
-        for oi in xrange(self.ndim_out):
+        print('building grad output')
+        for oi in range(self.ndim_out):
             g = tf.gradients(son.sum_output[oi], son.batch)[0]
             grad.append(g)
-            print '\r%3d out of %3d took %5.3f sec' % ( oi, self.ndim_out, time()-t1),
+            print('\r%3d out of %3d took %5.3f sec' % ( oi, self.ndim_out, time()-t1), end=' ')
             ti = time()
         grad   = tf.stack(grad)
-        print 'building grad output took %.3f sec' % (time() - t0)
+        print('building grad output took %.3f sec' % (time() - t0))
 
         return grad, tf.stack(son.output), son.batch
 
@@ -230,7 +231,7 @@ class Network(object):
 
         son = SumOutputNet(self)
         # sum over batch again
-        grad = tf.stack([ tf.gradients(son.sum_output[oi], son.batch)[0] for oi in xrange(self.ndim_out)])
+        grad = tf.stack([ tf.gradients(son.sum_output[oi], son.batch)[0] for oi in range(self.ndim_out)])
 
         sec = []
 
@@ -241,9 +242,9 @@ class Network(object):
         raveled_index = np.arange(np.prod(self.ndim_in)).astype('int32')
         unraveled_index = np.array(np.unravel_index(raveled_index, self.ndim_in))
 
-        for oi in xrange(self.ndim_out):
+        for oi in range(self.ndim_out):
             t0 = time()
-            print 'building output %d out of %d' % (oi+1, self.ndim_out)
+            print('building output %d out of %d' % (oi+1, self.ndim_out))
 
             # tf.gather_nd(A, idx) takes tensor A and return elements whose indices are specified in idx
             # like [A[i] for i in idx] 
@@ -262,7 +263,7 @@ class Network(object):
                                                 np.tile(unraveled_index[:,i],[self.batch_size,1])]
                                         )
                                     for i in raveled_index])
-            print 'took %.3f sec' % (time()-t0)
+            print('took %.3f sec' % (time()-t0))
             sec.append(sec_oi_ii)
         sec_stack = tf.stack(sec)
         # make the output shape [ ndim_out, batch_size, prod(self.ndim_in) ]
@@ -303,7 +304,7 @@ def add_dropout(layer, out, *args):
     d = np.prod(layer.ndim_out)
     
     data_shape = tf.shape(out)
-    d_mask = tf.transpose(mask, perm = range(1, m_out+1) + [0])
+    d_mask = tf.transpose(mask, perm = list(range(1, m_out+1)) + [0])
 
     ds = []
     for d in args:
@@ -708,8 +709,8 @@ class DeepNetwork(Network):
             layer = self.layers[i]
 
             i_idx_h = construct_index(layer.ndim_in, s="j", n=2)
-            i_idx_h_1 = i_idx_h[:len(i_idx_h)/2]
-            i_idx_h_2 = i_idx_h[len(i_idx_h)/2:]
+            i_idx_h_1 = i_idx_h[:len(i_idx_h)//2]
+            i_idx_h_2 = i_idx_h[len(i_idx_h)//2:]
 
             o_idx_h = construct_index(layer.ndim_out, s="a")
 
@@ -736,8 +737,8 @@ class DeepNetwork(Network):
             skip_sec, skip_grad, skip_out, _ = layer.get_sec_grad_data([data,out])
 
             i_idx_h   = construct_index(layer.ndim_in[1], s="j", n=2)
-            i_idx_h_1 = i_idx_h[:len(i_idx_h)/2]
-            i_idx_h_2 = i_idx_h[len(i_idx_h)/2:]
+            i_idx_h_1 = i_idx_h[:len(i_idx_h)//2]
+            i_idx_h_2 = i_idx_h[len(i_idx_h)//2:]
             i_idx_h_c_1   = construct_index(layer.ndim_in[0], s="j", n=1)
             i_idx_h_c_2   = construct_index(layer.ndim_in[1], s="p", n=1)
             o_idx_h   = construct_index(layer.ndim_out, s="a")
@@ -773,8 +774,8 @@ class DeepNetwork(Network):
         hess, grad, out, _ = self.layers[0].get_hess_grad_data(data)
 
         i_idx_l = construct_index(self.layers[0].ndim_in, s="o",n=2)
-        i_idx_l_1 = i_idx_l[:len(i_idx_l)/2]
-        i_idx_l_2 = i_idx_l[len(i_idx_l)/2:]
+        i_idx_l_1 = i_idx_l[:len(i_idx_l)//2]
+        i_idx_l_2 = i_idx_l[len(i_idx_l)//2:]
 
         for i in range(1,self.nlayer):
 
@@ -782,8 +783,8 @@ class DeepNetwork(Network):
             layer = self.layers[i]
 
             i_idx_h = construct_index(layer.ndim_in, s="j", n=2)
-            i_idx_h_1 = i_idx_h[:len(i_idx_h)/2]
-            i_idx_h_2 = i_idx_h[len(i_idx_h)/2:]
+            i_idx_h_1 = i_idx_h[:len(i_idx_h)//2]
+            i_idx_h_2 = i_idx_h[len(i_idx_h)//2:]
 
             o_idx_h = construct_index(layer.ndim_out, s="a")
 
@@ -802,8 +803,8 @@ class DeepNetwork(Network):
                             +o_idx_h+"i"+i_idx_l_1,  this_grad, grad)
 
             i_idx_l = construct_index(layer.ndim_in, s="o",n=2)
-            i_idx_l_1 = i_idx_l[:len(i_idx_l)/2]
-            i_idx_l_2 = i_idx_l[len(i_idx_l)/2:]
+            i_idx_l_1 = i_idx_l[:len(i_idx_l)//2]
+            i_idx_l_2 = i_idx_l[len(i_idx_l)//2:]
 
         if self.add_skip:
 
@@ -812,8 +813,8 @@ class DeepNetwork(Network):
             skip_hess, skip_cross, skip_grad, skip_out, _ = layer.get_hess_cross_grad_data([data,out])
 
             i_idx_h = construct_index(layer.ndim_in[1], s="j", n=2)
-            i_idx_h_1 = i_idx_h[:len(i_idx_h)/2]
-            i_idx_h_2 = i_idx_h[len(i_idx_h)/2:]
+            i_idx_h_1 = i_idx_h[:len(i_idx_h)//2]
+            i_idx_h_2 = i_idx_h[len(i_idx_h)//2:]
             i_idx_h_c_1   = construct_index(layer.ndim_in[0], s="q", n=1)
             i_idx_h_c_2   = construct_index(layer.ndim_in[1], s="u", n=1)
             o_idx_h = construct_index(layer.ndim_out, s="a")

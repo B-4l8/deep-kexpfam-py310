@@ -1,11 +1,12 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
-from settings import FDTYPE
+from .settings import FDTYPE
 
 def construct_index(dim,s="o", n=1):
     ''' construct string for use in tf.einsum as it does not support...'''
     s = ord(s)
-    return ''.join([str(unichr(i+s)) for i in range(len(dim)*n)])
+    return ''.join([str(chr(i+s)) for i in range(len(dim)*n)])
 
 c = 30
 '''
