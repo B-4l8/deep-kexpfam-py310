@@ -1,5 +1,5 @@
 from scipy.linalg.decomp_cholesky import cho_solve
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 
 import numpy as np
 
